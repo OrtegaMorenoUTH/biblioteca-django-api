@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login con Google - Biblioteca UTH</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.2);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .user-info {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .user-info img {
+            border-radius: 50%;
+            margin-top: 10px;
+            width: 80px;
+            height: 80px;
+        }
+        
+        .token-display {
+            background: #2d2d2d;
+            color: #4ec9b0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            margin: 10px 5px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-google {
+            background: #4285f4;
+        }
+        
+        .btn-google:hover {
+            background: #357ae8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Login con Google</h1>
+        
+        <div id="loading" class="loading" style="display:none;">
+            <div class="spinner"></div>
+            <p>Procesando autenticación...</p>
+        </div>
+        
+        <div id="result" class="result" style="display:none;"></div>
+        
+        <div id="initial" style="text-align: center;">
+            <p style="color: #666; margin-bottom: 20px;">
+                Haz clic en el botón para iniciar sesión con tu cuenta de Google
+            </p>
+            <a href="/api/auth/google/redirect/" class="btn btn-google">
+                🔐 Continuar con Google
+            </a>
+            <br>
+            <a href="/" class="btn" style="background: #666; margin-top: 20px;">
+                ← Volver al inicio
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        // Verificar si hay parámetros en la URL (viene de callback)
+        const urlParams = new URLSearchParams(window.location.search);
+        const accessToken = urlParams.get('access_token');
+        const refreshToken = urlParams.get('refresh_token');
+        const userInfo = urlParams.get('user_info');
+        const googleInfo = urlParams.get('google_info');
+        const message = urlParams.get('message');
+        const error = urlParams.get('error');
+        
+        if (error) {
+            // Mostrar error
+            document.getElementById('initial').style.display = 'none';
+            showError(decodeURIComponent(error));
+        } else if (accessToken && refreshToken) {
+            // Ocultar el botón inicial
+            document.getElementById('initial').style.display = 'none';
+            
+            // Guardar tokens en localStorage
+            localStorage.setItem('access_token', accessToken);
+            localStorage.setItem('refresh_token', refreshToken);
+            
+            // Parsear información del usuario
+            const user = userInfo ? JSON.parse(decodeURIComponent(userInfo)) : {};
+            const google = googleInfo ? JSON.parse(decodeURIComponent(googleInfo)) : {};
+            
+            showSuccess(message || 'Login exitoso', user, google, accessToken);
+        }
+        
+        function showSuccess(msg, user, google, token) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result success';
+            resultDiv.style.display = 'block';
+            
+            resultDiv.innerHTML = `
+                <h2>✅ ${msg}</h2>
+                
+                <div class="user-info">
+                    <h3>👤 Datos del Usuario</h3>
+                    <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                    <p><strong>Nombre:</strong> ${user.first_name || ''} ${user.last_name || ''}</p>
+                    <p><strong>Username:</strong> ${user.username || 'N/A'}</p>
+                    ${google.picture ? `<img src="${google.picture}" alt="Foto de perfil">` : ''}
+                </div>
+                
+                <div class="token-display">
+                    <strong>🔑 Access Token (JWT):</strong><br>
+                    ${token.substring(0, 80)}...
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="/api/" class="btn">📚 Ir a la API</a>
+                    <a href="/" class="btn">🏠 Volver al Inicio</a>
+                </div>
+            `;
+        }
+        
+        function showError(errorMessage) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result error';
+            resultDiv.style.display = 'block';
+            
+            resultDiv.innerHTML = `
+                <h2>❌ Error en el Login</h2>
+                <p>${errorMessage}</p>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="/oauth/login/" class="btn btn-google">🔄 Intentar de nuevo</a>
+                    <a href="/" class="btn">🏠 Volver al Inicio</a>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

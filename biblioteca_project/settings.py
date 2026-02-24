@@ -12,10 +12,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -38,13 +40,20 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'django.contrib.sites',  # ← AGREGAR (requerido por allauth)
 
     # Third-party apps
     'rest_framework',
     'corsheaders',
     'django_filters',
-    "oauth2_provider",
-    
+    'rest_framework_simplejwt',
+    'oauth2_provider',  # ← AGREGAR (Django OAuth Toolkit)
+    'allauth',  # ← AGREGAR
+    'allauth.account',  # ← AGREGAR
+    'allauth.socialaccount',  # ← AGREGAR
+    'allauth.socialaccount.providers.google',  # ← AGREGAR
+    'django_extensions',
+
     # Tu aplicación
     'libros',
 ]
@@ -58,6 +67,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'allauth.account.middleware.AccountMiddleware',  # ← AGREGAR
 ]
 
 ROOT_URLCONF = "biblioteca_project.urls"
@@ -65,10 +75,11 @@ ROOT_URLCONF = "biblioteca_project.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
+                'django.template.context_processors.debug',
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
@@ -210,3 +221,72 @@ USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# =======================
+# SITE CONFIGURATION
+# =======================
+SITE_ID = 1  # ← AGREGAR
+
+# =======================
+# AUTHENTICATION BACKENDS
+# =======================
+AUTHENTICATION_BACKENDS = [
+    # Backend por defecto de Django (username/password)
+    'django.contrib.auth.backends.ModelBackend',
+    
+    # Backend de allauth para OAuth social
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# =======================
+# DJANGO ALLAUTH CONFIG
+# =======================
+
+# Configuración de cuentas
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False  # Solo email para login social
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional'  # Para desarrollo: 'mandatory' en producción
+
+# Configuración de login social
+SOCIALACCOUNT_AUTO_SIGNUP = True  # Crear usuario automáticamente
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # No verificar email en OAuth
+
+# Proveedores OAuth configurados
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            'client_id': os.getenv('client_id'),  # ← REEMPLAZAR
+            'secret': os.getenv('secret'),  # ← REEMPLAZAR
+            'key': ''
+        }
+    }
+}
+
+# =======================
+# OAUTH 2.0 PROVIDER SETTINGS
+# =======================
+# Configuración para django-oauth-toolkit
+OAUTH2_PROVIDER = {
+    # Tiempo de vida de los tokens
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,  # 1 hora
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400 * 7,  # 7 días
+    
+    # Scopes disponibles
+    'SCOPES': {
+        'read': 'Acceso de lectura',
+        'write': 'Acceso de escritura',
+        'groups': 'Access to groups - Acceso a grupos de usuario' 
+    },
+    
+    # Tipo de token por defecto
+    'ACCESS_TOKEN_MODEL': 'oauth2_provider.AccessToken',
+    'REFRESH_TOKEN_MODEL': 'oauth2_provider.RefreshToken',
+}
