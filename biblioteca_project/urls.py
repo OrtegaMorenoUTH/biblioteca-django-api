@@ -19,6 +19,9 @@ from django.contrib import admin
 from django.urls import path, include
 
 from libros import web_views  # ← AGREGAR
+from graphene_django.views import GraphQLView
+from django.views.decorators.csrf import csrf_exempt
+
 
 urlpatterns = [
 
@@ -37,4 +40,5 @@ urlpatterns = [
     path('', web_views.home, name='home'),
     path('oauth/login/', web_views.oauth_login, name='oauth_login'),
     path('login/jwt/', web_views.jwt_login_page, name='jwt_login_page'),
+    path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
 ]

@@ -17,6 +17,8 @@ from rest_framework_simplejwt.views import (
 from . import api_views
 from . import oauth_views 
 
+from .oauth_views import api_intensiva
+
 # ===== ROUTER PARA VIEWSETS =====
 # El router genera automáticamente las URLs para CRUD
 router = DefaultRouter()
@@ -47,4 +49,5 @@ urlpatterns = [
     path('auth/google/callback/', oauth_views.google_oauth_callback, name='google_callback'),
     
     path('', include(router.urls)),
+    
 ]
